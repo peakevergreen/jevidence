@@ -19,6 +19,17 @@ use [Kev's own playground](https://github.com/jaredpalmer/kev#playground) or its
 [hosted demo](https://huggingface.co/spaces/jaredpalmer/kev). Jevidence focuses on
 the application policy and its tests.
 
+## Watch the 50-second demo
+
+[![Watch the Jevidence offline policy demo](assets/jevidence-demo-poster.jpg)](https://github.com/peakevergreen/jevidence/raw/refs/heads/main/assets/jevidence-demo.mp4)
+
+[Watch or download the MP4](https://github.com/peakevergreen/jevidence/raw/refs/heads/main/assets/jevidence-demo.mp4) · [Transcript](docs/demo.md)
+
+See the same synthetic judgment fall back at a `0.8` route threshold, then
+propose runtime investigation at `0.7`, followed by fixture checks and tests.
+This silent, captioned walkthrough uses real offline CLI output, with selected
+fields shown for readability. It makes no live model calls and applies no action.
+
 ## Start in 30 seconds
 
 Requires Python **3.10+**. No packages, API key, or network are needed for the

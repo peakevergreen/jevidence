@@ -1,0 +1,31 @@
+WEBVTT
+
+1
+00:00:00.000 --> 00:00:05.000
+Let Jev judge. Let your code decide.
+An offline walkthrough using synthetic judgments. No API key needed.
+
+2
+00:00:05.000 --> 00:00:16.000
+A judgment is evidence.
+Confidence 0.72 is below the 0.80 route threshold. The policy falls back.
+
+3
+00:00:16.000 --> 00:00:27.000
+Same evidence. Different policy.
+Lower the threshold to 0.70 and the proposed queue changes. Nothing is applied.
+
+4
+00:00:27.000 --> 00:00:35.000
+Replay the policy.
+Eight constructed cases match their expected decisions at the default thresholds.
+
+5
+00:00:35.000 --> 00:00:42.000
+Test the code around the model.
+Offline tests check boundaries and failure paths. SDK transport tests are skipped.
+
+6
+00:00:42.000 --> 00:00:50.000
+Try Jevidence.
+Clone the repository and run the demo. Read the companion guide for the design.
