@@ -2,6 +2,7 @@
 from dataclasses import asdict
 import json
 from importlib.resources import files
+from urllib.parse import urlsplit
 
 from .policy import Evidence, Thresholds, POLICY_VERSION, decide
 from .questions import QUESTION_VERSION
@@ -24,13 +25,31 @@ def validate_issue(value):
     return result
 
 
-def judge_live(issue, *, model, timeout):
+KEV_URL = "http://127.0.0.1:8009"
+
+
+def validate_kev_url(value):
+    url = urlsplit(value)
+    if (url.scheme not in {"http", "https"} or not url.hostname or url.username
+            or url.password or url.query or url.fragment or url.path not in {"", "/"}):
+        raise ValueError("--kev-url must be an HTTP(S) server origin, without credentials, path, query, or fragment")
+    return value.rstrip("/")
+
+
+def judge_live(issue, *, model, timeout, backend="typesafe", kev_url=KEV_URL):
     from typesafe_sdk import RetryPolicy, TypeSafeClient
     from .questions import issue_questions
 
     # A single request, with SDK retries disabled. This timeout is per HTTP
     # operation, not an end-to-end deadline for a production workflow.
-    with TypeSafeClient(model=model, timeout=timeout, retry=RetryPolicy(max_retries=0)) as client:
+    if backend not in {"typesafe", "kev"}:
+        raise ValueError("unknown backend")
+    options = {}
+    if backend == "kev":
+        # Kev's local server has no authentication. Satisfy SDK key validation
+        # without sending a real TYPESAFE_API_KEY to another server.
+        options = {"api_key": "local", "base_url": validate_kev_url(kev_url)}
+    with TypeSafeClient(model=model, timeout=timeout, retry=RetryPolicy(max_retries=0), **options) as client:
         response = client.system_one(state={"issue": issue}, questions=issue_questions())
     evidence = Evidence(
         model=response.model,

@@ -2,10 +2,12 @@ PYTHON ?= python3
 VENV ?= .venv
 PY := $(VENV)/bin/python
 IMAGE ?= peakevergreen/jevidence:local
+KEV_URL ?= http://127.0.0.1:8009
 .DEFAULT_GOAL := help
 
-.PHONY: help setup setup-live demo evaluate test live docker-build docker-test docker-demo docker-live
+.PHONY: help setup setup-live demo evaluate test live kev docker-build docker-test docker-demo docker-live
 help:
+	@printf '%s\n' 'make kev           Run against your existing Kev server (no TypeSafe key)'
 	@printf '%s\n' 'make demo          Offline example (Python 3.10+; no install or key)' 'make evaluate      Synthetic policy checks, not model benchmarks' 'make test          Offline policy/CLI tests' 'make setup-live    Create venv and install pinned live dependencies' 'make live          One billable request using TYPESAFE_API_KEY' 'make docker-build  Build the runtime image' 'make docker-test   Build the test stage and run its tests' 'make docker-demo   Run the image offline' 'make docker-live   One billable request; pass key from environment'
 
 setup:
@@ -26,6 +28,9 @@ test:
 
 live:
 	$(PY) -m jevidence triage --live --input examples/issue.json
+
+kev:
+	$(PY) -m jevidence triage --live --backend kev --kev-url "$(KEV_URL)" --timeout 120 --input examples/issue.json
 
 docker-build:
 	docker build --target runtime -t $(IMAGE) .

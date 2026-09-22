@@ -26,18 +26,49 @@ class SdkContractTests(unittest.TestCase):
             },
         }
 
-    def invoke(self, handler):
+    def invoke(self, handler, backend="typesafe"):
         import httpx2
         from typesafe_sdk import TypeSafeClient
         def client_factory(**kwargs):
-            self.assertEqual(kwargs["model"], MODEL)
+            self.assertEqual(kwargs["model"], "kev-latest" if backend == "kev" else MODEL)
             self.assertEqual(kwargs["timeout"], 3.0)
             self.assertEqual(kwargs["retry"].max_retries, 0)
-            return TypeSafeClient(api_key="test-key", base_url="https://mock.invalid/",
-                                  transport=httpx2.MockTransport(handler), **kwargs)
+            if backend == "kev":
+                self.assertEqual(kwargs["api_key"], "local")
+                self.assertEqual(kwargs["base_url"], "http://127.0.0.1:8009")
+            else:
+                kwargs.update(api_key="test-key", base_url="https://mock.invalid/")
+            return TypeSafeClient(transport=httpx2.MockTransport(handler), **kwargs)
         with patch("typesafe_sdk.TypeSafeClient", side_effect=client_factory):
-            return run_case(self.issue, lambda issue: judge_live(issue, model=MODEL, timeout=3.0),
+            return run_case(self.issue, lambda issue: judge_live(issue, model="kev-latest" if backend == "kev" else MODEL,
+                            timeout=3.0, backend=backend),
                             mode="live", current_queue="existing-review")
+
+    def test_kev_wire_format_and_paid_key_isolation(self):
+        import httpx2
+        requests = []
+        self.response.update(model="kev-latest", latency_ms=495)
+        def handler(request):
+            requests.append(request)
+            return httpx2.Response(200, json=self.response)
+        with patch.dict("os.environ", {"TYPESAFE_API_KEY": "paid-key-not-for-kev", "TYPESAFE_BASE_URL": "https://not-kev.invalid"}):
+            result = self.invoke(handler, backend="kev")
+        self.assertEqual(len(requests), 1)
+        self.assertEqual(str(requests[0].url), "http://127.0.0.1:8009/v1/systemone")
+        self.assertNotIn("paid-key-not-for-kev", str(requests[0].headers))
+        self.assertEqual(json.loads(requests[0].content)["model"], "kev-latest")
+        self.assertEqual(result["status"], "judged")
+        self.assertEqual(result["evidence"]["model"], "kev-latest")
+        self.assertEqual(result["proposed_queue"], "runtime-investigation")
+
+    def test_kev_connection_failure_retains_queue(self):
+        import httpx2
+        def handler(request):
+            raise httpx2.ConnectError("local server is unavailable", request=request)
+        result = self.invoke(handler, backend="kev")
+        self.assertEqual(result["status"], "unavailable")
+        self.assertEqual(result["current_queue"], "existing-review")
+        self.assertIsNone(result["proposed_queue"])
 
     def test_request_and_answer_shapes(self):
         import httpx2

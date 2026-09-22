@@ -2,7 +2,7 @@
 
 # Jevidence
 
-**A playground for Jev. Let Jev judge. Let your code decide.**
+**Let Jev judge. Let your code decide.**
 
 Turn TypeSafe AI's **Choice**, **Noul**, and **Score** judgments into an ordinary,
 testable routing policy. The model proposes evidence; your code decides whether
@@ -12,6 +12,12 @@ issues, runs commands, or writes to an external system.
 A companion to [Jev for developers: typed decisions inside real software](https://peakevergreen.com/blog/jev-for-developers/)
 by [Peak Evergreen](https://peakevergreen.com/). This is an independent educational
 project, not an official TypeSafe product.
+
+You can also run the same questions and policy against an existing
+[Kev](https://github.com/jaredpalmer/kev) server. For interactive model exploration,
+use [Kev's own playground](https://github.com/jaredpalmer/kev#playground) or its
+[hosted demo](https://huggingface.co/spaces/jaredpalmer/kev). Jevidence focuses on
+the application policy and its tests.
 
 ## Start in 30 seconds
 
@@ -78,7 +84,7 @@ never become an unchecked function name, URL, or shell command.
 
 ## Make one live request
 
-Live mode sends the issue text to TypeSafe and uses your account's paid API.
+The default live backend sends the issue text to TypeSafe and uses your account's paid API.
 The default demo never makes that call, even if an API key is present.
 
 ```sh
@@ -115,7 +121,8 @@ customer material into a public issue or fixture.
 ```
 
 The SDK is pinned to **0.7.1**, and the model defaults to **jev-1.13.0**. Live
-output records the resolved model returned by the API. SDK retries are explicitly
+output records the model label returned by the API and the selected backend.
+For Kev that label can be an alias; see the checkpoint notes below. SDK retries are explicitly
 disabled to keep this a single-request experiment. The timeout bounds HTTP
 operations, not an entire production job. There is no outer retry loop.
 
@@ -128,6 +135,23 @@ do not change its exit code; the test suite enforces the expected fixture policy
 
 Output omits source text and raw provider error messages. Avoid SDK debug logging
 for sensitive inputs: SDK request/response logging can include bodies.
+
+## Use an existing Kev server
+
+Follow [Kev's server setup](https://github.com/jaredpalmer/kev#quick-start), then:
+
+```sh
+make setup-live
+make kev
+# Different local server port:
+make kev KEV_URL=http://127.0.0.1:8010
+```
+
+This uses the same SDK, questions, and routing policy. It needs no TypeSafe key
+and sends the SDK's placeholder key `local`, even if a paid key is in your
+environment. Jevidence does not install or launch Kev, download model weights,
+or reproduce its playground. See [the Kev connection guide](docs/kev.md) for
+the full CLI command, comparison notes, and serving limitations.
 
 ## Docker
 
@@ -177,7 +201,9 @@ fixtures, changed thresholds, unavailable judgments, CLI opt-in, and failure
 exit behavior. With the live dependencies installed, it exercises the real SDK
 through a mocked HTTP transport, checks outgoing questions, disables retries,
 and verifies missing-answer and server-error handling. **Tests never call the
-live API.** Three SDK tests are skipped when that optional dependency is absent.
+live API.** Five SDK tests are skipped when that optional dependency is absent.
+They include Kev's response shape, local-server failure, and verification that
+a TypeSafe key is never forwarded to the Kev backend.
 
 GitHub Actions checks Python 3.10, 3.12, and 3.13 and builds/runs both Docker
 stages. No repository secrets are required. `requirements-live.txt` pins the
@@ -191,9 +217,10 @@ jevidence/
   policy.py        Pure decision rules and validated evidence
   questions.py     Versioned Choice/Noul/Score definitions
   runner.py        Fixture loading, SDK adapter, failure boundary, evaluation
-  cli.py           Offline demo, fixture evaluation, explicit live triage
+  cli.py           Offline demo, fixture evaluation, TypeSafe/Kev live triage
   data/cases.json  Eight synthetic judgments and expected policy outcomes
 examples/issue.json Synthetic issue for a live request
+docs/kev.md        Connect to Kev's existing server and playground
 tests/             Policy, CLI, and real-SDK/mocked-HTTP tests
 Makefile           Local and Docker commands
 Dockerfile         Non-root runtime and test stages

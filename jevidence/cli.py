@@ -4,11 +4,10 @@ import json
 import math
 import os
 from pathlib import Path
-import sys
 
 from .policy import Evidence, Thresholds
 from .questions import MODEL
-from .runner import evaluate_cases, judge_live, load_cases, run_case, validate_issue
+from .runner import KEV_URL, evaluate_cases, judge_live, load_cases, run_case, validate_issue, validate_kev_url
 
 
 def positive_timeout(value):
@@ -33,8 +32,10 @@ def main(argv=None):
             command.add_argument("--case", default="runtime-low-confidence")
         if name == "triage":
             command.add_argument("--input", type=Path, required=True)
-            command.add_argument("--live", action="store_true", help="Send this issue to TypeSafe (billable)")
-            command.add_argument("--model", default=MODEL)
+            command.add_argument("--live", action="store_true", help="Send this issue to the selected server (TypeSafe calls are billable)")
+            command.add_argument("--backend", choices=("typesafe", "kev"), default="typesafe")
+            command.add_argument("--kev-url", help=f"Kev server origin; defaults to {KEV_URL}")
+            command.add_argument("--model", help=f"Defaults to {MODEL} for TypeSafe or kev-latest for Kev")
             command.add_argument("--timeout", type=positive_timeout, default=15.0)
             command.add_argument("--current-queue", default="general-triage")
     args = parser.parse_args(argv)
@@ -51,12 +52,18 @@ def main(argv=None):
         else:
             if not args.live:
                 raise ValueError("triage requires --live; use demo for an offline run")
-            if not os.environ.get("TYPESAFE_API_KEY", "").strip():
+            if args.backend == "typesafe" and args.kev_url:
+                raise ValueError("--kev-url requires --backend kev")
+            if args.backend == "typesafe" and not os.environ.get("TYPESAFE_API_KEY", "").strip():
                 raise ValueError("set TYPESAFE_API_KEY in the environment before using --live")
+            kev_url = validate_kev_url(args.kev_url or KEV_URL) if args.backend == "kev" else KEV_URL
+            model = args.model or ("kev-latest" if args.backend == "kev" else MODEL)
             # Parse and validate before making a request. Never print the body.
             issue = validate_issue(json.loads(args.input.read_text()))
-            result = run_case(issue, lambda item: judge_live(item, model=args.model, timeout=args.timeout),
+            result = run_case(issue, lambda item: judge_live(item, model=model, timeout=args.timeout,
+                              backend=args.backend, kev_url=kev_url),
                               current_queue=args.current_queue, mode="live", thresholds=thresholds)
+            result.update(backend=args.backend, requested_model=model)
     except (ValueError, OSError) as error:
         # JSONDecodeError can contain document excerpts in other decoders.
         message = "invalid input JSON" if isinstance(error, json.JSONDecodeError) else str(error)

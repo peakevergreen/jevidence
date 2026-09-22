@@ -5,9 +5,39 @@ import unittest
 from unittest.mock import patch
 
 from jevidence.cli import main
+from jevidence.policy import Evidence
 
 
 class CliTests(unittest.TestCase):
+    def test_kev_uses_explicit_backend_without_a_typesafe_key(self):
+        output = StringIO()
+        with patch.dict("os.environ", {}, clear=True), \
+                patch("jevidence.cli.judge_live", return_value=Evidence("kev-latest", "runtime", .72, .9, 1.8)) as live, \
+                redirect_stdout(output):
+            self.assertEqual(main(["triage", "--live", "--backend", "kev", "--input", "examples/issue.json"]), 0)
+        self.assertEqual(live.call_args.kwargs["backend"], "kev")
+        self.assertEqual(live.call_args.kwargs["model"], "kev-latest")
+        self.assertEqual(live.call_args.kwargs["kev_url"], "http://127.0.0.1:8009")
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["backend"], "kev")
+        self.assertEqual(result["requested_model"], "kev-latest")
+        self.assertEqual(result["proposed_queue"], "general-triage")
+
+    def test_kev_requires_opt_in_and_valid_server_configuration(self):
+        for extra in ([], ["--live", "--kev-url", "file:///tmp/kev"],
+                      ["--live", "--kev-url", "http://localhost:8009/v1/systemone"],
+                      ["--live", "--kev-url", "http://secret@localhost:8009"]):
+            with self.subTest(extra=extra), patch("jevidence.cli.judge_live") as live, \
+                    redirect_stderr(StringIO()), self.assertRaises(SystemExit) as caught:
+                main(["triage", "--backend", "kev", "--input", "examples/issue.json", *extra])
+            self.assertEqual(caught.exception.code, 2)
+            live.assert_not_called()
+
+    def test_typesafe_does_not_accept_a_kev_url(self):
+        with redirect_stderr(StringIO()), self.assertRaises(SystemExit) as caught:
+            main(["triage", "--live", "--kev-url", "http://localhost:8009", "--input", "examples/issue.json"])
+        self.assertEqual(caught.exception.code, 2)
+
     def test_demo_never_calls_live_adapter(self):
         output = StringIO()
         with patch("jevidence.cli.judge_live") as live, redirect_stdout(output):
