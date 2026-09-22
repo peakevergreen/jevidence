@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 import math
 
-POLICY_VERSION = "issue-routing-v1"
+POLICY_VERSION = "issue-routing-v2"
 QUEUES = {
     "docs": "documentation-review",
     "build": "build-investigation",

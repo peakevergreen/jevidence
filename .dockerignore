@@ -10,5 +10,6 @@
 !jevidence/data/cases.json
 !examples/
 !examples/issue.json
+!examples/replay-synthetic.jsonl
 !tests/
 !tests/*.py

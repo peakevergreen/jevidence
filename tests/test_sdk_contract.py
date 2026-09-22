@@ -4,7 +4,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from jevidence.runner import judge_live, run_case
+from jevidence.runner import TYPESAFE_URL, judge_live, run_case
 from jevidence.questions import MODEL
 
 SDK_AVAILABLE = importlib.util.find_spec("typesafe_sdk") is not None
@@ -26,7 +26,7 @@ class SdkContractTests(unittest.TestCase):
             },
         }
 
-    def invoke(self, handler, backend="typesafe"):
+    def invoke(self, handler, backend="typesafe", record_response=None):
         import httpx2
         from typesafe_sdk import TypeSafeClient
         def client_factory(**kwargs):
@@ -37,11 +37,12 @@ class SdkContractTests(unittest.TestCase):
                 self.assertEqual(kwargs["api_key"], "local")
                 self.assertEqual(kwargs["base_url"], "http://127.0.0.1:8009")
             else:
-                kwargs.update(api_key="test-key", base_url="https://mock.invalid/")
+                self.assertEqual(kwargs["base_url"], TYPESAFE_URL)
+                kwargs.update(api_key="test-key")
             return TypeSafeClient(transport=httpx2.MockTransport(handler), **kwargs)
         with patch("typesafe_sdk.TypeSafeClient", side_effect=client_factory):
             return run_case(self.issue, lambda issue: judge_live(issue, model="kev-latest" if backend == "kev" else MODEL,
-                            timeout=3.0, backend=backend),
+                            timeout=3.0, backend=backend, record_response=record_response),
                             mode="live", current_queue="existing-review")
 
     def test_kev_wire_format_and_paid_key_isolation(self):
@@ -103,3 +104,32 @@ class SdkContractTests(unittest.TestCase):
         result = self.invoke(lambda request: httpx2.Response(200, json=self.response))
         self.assertEqual(result["status"], "unavailable")
         self.assertIsNone(result["proposed_queue"])
+
+    def test_typesafe_origin_is_pinned_despite_environment_override(self):
+        import httpx2
+        requests = []
+        def handler(request):
+            requests.append(request)
+            return httpx2.Response(200, json=self.response)
+        with patch.dict("os.environ", {"TYPESAFE_BASE_URL": "http://untrusted.invalid:8009"}):
+            result = self.invoke(handler)
+        self.assertEqual(result["status"], "judged")
+        self.assertEqual(str(requests[0].url), "https://api.typesafe.ai/v1/systemone")
+
+    def test_recording_saves_raw_response_without_credentials_and_never_overwrites(self):
+        import httpx2
+        import tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "capture.json"
+            result = self.invoke(lambda request: httpx2.Response(200, json=self.response), record_response=path)
+            self.assertEqual(result["status"], "judged")
+            captured = json.loads(path.read_text())
+            self.assertEqual(captured["response"]["answers"]["route"]["choice"], "runtime")
+            self.assertEqual(captured["endpoint"], TYPESAFE_URL)
+            self.assertIn("recorded_at", captured)
+            self.assertNotIn("test-key", path.read_text())
+            original = path.read_bytes()
+            result = self.invoke(lambda request: httpx2.Response(200, json=self.response), record_response=path)
+            self.assertEqual(result["status"], "error")
+            self.assertEqual(path.read_bytes(), original)

@@ -4,13 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jevidence"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Let Jev judge and let your code decide: an inspectable issue-routing sandbox."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Peak Evergreen LLC"}]
 dependencies = []
+keywords = ["jev", "typesafe", "llm", "issue-triage", "human-in-the-loop", "replay"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+]
 
 [project.optional-dependencies]
 live = ["typesafe-sdk==0.7.1"]
@@ -19,10 +31,21 @@ live = ["typesafe-sdk==0.7.1"]
 jevidence = "jevidence.cli:main"
 
 [project.urls]
+Repository = "https://github.com/peakevergreen/jevidence"
+Issues = "https://github.com/peakevergreen/jevidence/issues"
 Article = "https://peakevergreen.com/blog/jev-for-developers/"
+
+[tool.setuptools.dynamic]
+version = {attr = "jevidence.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["jevidence*"]
 
 [tool.setuptools.package-data]
 jevidence = ["data/*.json"]
+
+[tool.ruff]
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "B023"]

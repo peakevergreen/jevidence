@@ -73,3 +73,27 @@ class CliTests(unittest.TestCase):
         with redirect_stderr(StringIO()), self.assertRaises(SystemExit) as caught:
             main(["demo", "--route-floor", "nan"])
         self.assertEqual(caught.exception.code, 2)
+
+    def test_unexpected_defects_have_distinct_exit_and_no_private_trace(self):
+        output = StringIO()
+        with patch.dict("os.environ", {"TYPESAFE_API_KEY": "test-key"}), \
+                patch("jevidence.cli.judge_live", side_effect=AttributeError("secret-input")), \
+                redirect_stdout(output):
+            code = main(["triage", "--live", "--input", "examples/issue.json"])
+        self.assertEqual(code, 3)
+        result = json.loads(output.getvalue())
+        self.assertEqual(result["status"], "error")
+        self.assertEqual(result["error_type"], "AttributeError")
+        self.assertIsNone(result["current_queue"])
+        self.assertNotIn("secret-input", output.getvalue())
+
+    def test_replay_is_offline_and_bad_input_has_stable_program_name(self):
+        output = StringIO()
+        with patch("jevidence.cli.judge_live") as live, redirect_stdout(output):
+            self.assertEqual(main(["replay", "examples/replay-synthetic.jsonl", "--labels", "--compare-route-floor", "0.7"]), 0)
+        live.assert_not_called()
+        self.assertEqual(len(json.loads(output.getvalue())["runs"]), 2)
+        errors = StringIO()
+        with redirect_stderr(errors), self.assertRaises(SystemExit):
+            main(["replay", "examples/replay-synthetic.jsonl", "--route-floor", "nan"])
+        self.assertIn("jevidence: error:", errors.getvalue())

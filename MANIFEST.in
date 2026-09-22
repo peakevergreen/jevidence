@@ -1,0 +1,4 @@
+include Makefile Dockerfile .dockerignore CONTRIBUTING.md requirements-live.txt
+recursive-include docs *.md
+recursive-include examples *.json *.jsonl
+recursive-include assets *.png *.jpg *.mp4 *.vtt

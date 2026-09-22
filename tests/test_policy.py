@@ -76,3 +76,23 @@ class RunnerTests(unittest.TestCase):
         for bad in ({}, dict(self.issue, body=""), dict(self.issue, body="x" * 20001), []):
             with self.subTest(issue=bad), self.assertRaises(ValueError):
                 validate_issue(bad)
+
+    def test_unknown_and_known_existing_queues_are_distinct(self):
+        evidence = Evidence("synthetic", "other", .9, .9, .5)
+        issue = {"id": "x", "title": "Report", "body": "Details"}
+        unknown = run_case(issue, lambda _: evidence)
+        same = run_case(issue, lambda _: evidence, current_queue="general-triage")
+        changed = run_case(issue, lambda _: evidence, current_queue="existing")
+        self.assertIsNone(unknown["current_queue"])
+        self.assertIsNone(unknown["change_proposed"])
+        self.assertFalse(same["change_proposed"])
+        self.assertTrue(changed["change_proposed"])
+        self.assertEqual(unknown["hints"], ["needs_more_detail"])
+
+    def test_specificity_hint_has_boundary_but_never_changes_queue(self):
+        issue = {"id": "x", "title": "Report", "body": "Details"}
+        for score, hints in ((.999, ["needs_more_detail"]), (1., []), (2., [])):
+            evidence = Evidence("synthetic", "build", .9, 0., score)
+            record = run_case(issue, lambda _, e=evidence: e)
+            self.assertEqual(record["hints"], hints)
+            self.assertEqual(record["proposed_queue"], "build-investigation")

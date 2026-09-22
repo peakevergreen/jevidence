@@ -4,270 +4,151 @@
 
 **Let Jev judge. Let your code decide.**
 
-Turn TypeSafe AI's **Choice**, **Noul**, and **Score** judgments into an ordinary,
-testable routing policy. The model proposes evidence; your code decides whether
-that evidence is enough to suggest a queue. Nothing in this project assigns
-issues, runs commands, or writes to an external system.
+A Python sandbox for turning TypeSafe Jev judgments into testable issue-routing
+proposals. Inspect the evidence, change a threshold, and replay labeled records
+without another model call.
 
-A companion to [Jev for developers: typed decisions inside real software](https://peakevergreen.com/blog/jev-for-developers/)
-by [Peak Evergreen](https://peakevergreen.com/). This is an independent educational
-project, not an official TypeSafe product.
+```text
+Issue → Jev judgment → your policy → proposed queue + review hints
+                            failure → keep the existing queue
+```
 
-You can also run the same questions and policy against an existing
-[Kev](https://github.com/jaredpalmer/kev) server. For interactive model exploration,
-use [Kev's own playground](https://github.com/jaredpalmer/kev#playground) or its
-[hosted demo](https://huggingface.co/spaces/jaredpalmer/kev). Jevidence focuses on
-the application policy and its tests.
+A companion to [Jev for developers](https://peakevergreen.com/blog/jev-for-developers/)
+by [Peak Evergreen](https://peakevergreen.com/). Substantially built with Codex;
+independent of TypeSafe.
 
 ## Watch the 50-second demo
 
-[![Watch the Jevidence offline policy demo](assets/jevidence-demo-poster.jpg)](https://github.com/peakevergreen/jevidence/raw/refs/heads/main/assets/jevidence-demo.mp4)
+https://github.com/user-attachments/assets/2502886a-ce3c-46c9-b118-edf8bd8bae9e
 
-[Watch or download the MP4](https://github.com/peakevergreen/jevidence/raw/refs/heads/main/assets/jevidence-demo.mp4) · [Transcript](docs/demo.md)
+[Video download](assets/jevidence-demo.mp4) · [Transcript](docs/demo.md)
 
-See the same synthetic judgment fall back at a `0.8` route threshold, then
-propose runtime investigation at `0.7`, followed by fixture checks and tests.
-This silent, captioned walkthrough uses real offline CLI output, with selected
-fields shown for readability. It makes no live model calls and applies no action.
+The silent, captioned demo shows the same synthetic judgment falling back at
+`0.8` and proposing runtime investigation at `0.7`, followed by policy tests.
+It captures an earlier revision; its test counts and output fields are historical.
 
 ## Start in 30 seconds
 
-Requires Python **3.10+**. No packages, API key, or network are needed for the
-fixture demo. These commands work from a fresh clone:
+Python **3.10+**. The offline commands need no packages, API key, or network after cloning.
 
 ```sh
 git clone https://github.com/peakevergreen/jevidence.git
 cd jevidence
 python3 -m jevidence demo
+python3 -m jevidence demo --route-floor 0.7
 python3 -m jevidence evaluate
-python3 -m unittest discover -s tests -v
 ```
 
 Or use `make demo`, `make evaluate`, and `make test`.
 
-The default synthetic case says **runtime, confidence 0.72**. The policy needs
-**0.8**, so it proposes **general-triage**. Try a stronger judgment or change the
-threshold:
+## Replay your labeled judgments
 
 ```sh
-python3 -m jevidence demo --case runtime-ready
-python3 -m jevidence demo --route-floor 0.7
-python3 -m jevidence evaluate --route-floor 0.95
+python3 -m jevidence replay examples/replay-synthetic.jsonl \
+  --labels --compare-route-floor 0.7 --compare-route-floor 0.95
 ```
 
-Output is JSON and includes `mode`, `evidence`, `proposed_queue`, `reason`,
-`current_queue`, question/policy versions, thresholds, and `applied: false`.
+Supply one JSON object per line with an `issue_id`, `provenance`, stored
+`evidence`, and an independent `expected_queue` label. Replay reports wrong
+specialist routes, review volume, unavailable judgments, coverage, and individual
+disagreements for each threshold. Omit `--labels` to inspect unlabeled evidence
+without implying accuracy. **Replay never contacts a model.**
 
-**All bundled judgments are constructed fixtures, not captured Jev responses.**
-Eight matching cases show that the policy behaves as specified; they do not
-measure model accuracy, calibration, or production readiness. Changing a threshold
-can deliberately change agreement with the fixture expectations.
+See [the replay guide](docs/replay.md) for the schema, denominators, and a workflow
+for recording, labeling, and comparing real judgments.
 
-## The boundary worth keeping
+## What the code decides
 
-```text
-Validated issue → Jev judgment → normalized evidence → Python policy → suggestion
-                         failure → retain current queue; no invented judgment
-```
+| Jev judgment | Application behavior |
+| --- | --- |
+| Choice: investigation area | Allowlist and confidence gate choose a specialist or general triage. |
+| Noul: explicit reproduction steps | Runtime reports below the reproduction gate go to reproduction review. |
+| Score: observation specificity, 0–2 | Below `1.0`, emit a `needs_more_detail` hint; never change the queue or priority. |
 
-| Primitive | Question in this sandbox | What code does with it |
-| --- | --- | --- |
-| Choice | Which area should investigate: docs, build, runtime, or other? | Uses an allowlist and a confidence threshold. |
-| Noul | Are explicit reproduction steps present? | Sends runtime reports with weak reproduction evidence to review. |
-| Score | How specific is the observation on a 0–2 rubric? | Records the result for inspection; does not turn it into severity or priority. |
+Reproduction gates **runtime only** in this teaching policy: a sequence of user
+actions is useful for reproducing application behavior; build and documentation
+reports can begin investigation from error output or a specific document reference.
+A build-specific completeness check would need different questions and labels.
 
-The central policy is in [`jevidence/policy.py`](jevidence/policy.py):
+The Score hint is an illustrative review signal from an averaged rubric, not
+proof that a report lacks detail. See [the policy](jevidence/policy.py) and
+[runner](jevidence/runner.py).
 
-```python
-if evidence.choice not in QUEUES:
-    return Decision("general-triage", "unknown_or_fallback_category")
-if evidence.confidence < thresholds.route_floor:
-    return Decision("general-triage", "route_confidence_below_floor")
-if evidence.choice == "runtime" and evidence.reproduction < thresholds.reproduction_floor:
-    return Decision("reproduction-review", "reproduction_below_floor")
-return Decision(QUEUES[evidence.choice], "route_passed_policy")
-```
-
-The Choice confidence statistic is different from the Noul probability. Neither
-threshold is a calibrated recommendation. Keep identifiers, authorization,
-numeric checks, persistence, and execution in your application. A category must
-never become an unchecked function name, URL, or shell command.
+Output includes evidence, thresholds, versions, proposed queue, hints, and
+`applied: false`. An omitted current queue is `null` (unknown). When supplied,
+`change_proposed` distinguishes a new suggestion from the existing queue.
 
 ## Make one live request
 
-The default live backend sends the issue text to TypeSafe and uses your account's paid API.
-The default demo never makes that call, even if an API key is present.
+Hosted TypeSafe calls send the validated issue ID, title, and body to TypeSafe
+and may incur charges. Configure `TYPESAFE_API_KEY` privately, then:
 
 ```sh
 make setup-live
-export TYPESAFE_API_KEY='your-key'
-make live
+.venv/bin/python -m jevidence triage --live --input examples/issue.json \
+  --current-queue existing-review
 ```
 
-Without Make:
+The TypeSafe endpoint is pinned to `https://api.typesafe.ai`; a
+`TYPESAFE_BASE_URL` override cannot redirect this backend. Output names the actual
+endpoint. The SDK is pinned to `0.7.1`, the default model to `jev-1.13.0`, and
+SDK retries are disabled. The HTTP timeout is not an end-to-end job deadline.
+
+To save a dated **real** raw response and its input, add
+`--record-response capture.json`. This is opt-in, refuses an existing filename,
+and includes issue text but not the API key. No real response is bundled yet.
+See [recording instructions](docs/replay.md#record-and-label-real-judgments).
+
+To use an existing [Kev](https://github.com/jaredpalmer/kev) server, run `make kev`
+after setup. Its endpoint is explicit and receives a placeholder key, never your
+TypeSafe key. See [the Kev guide](docs/kev.md); use Kev's own playground to explore
+its models.
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | Judgment or replay completed; may include review proposals or label mismatches. |
+| `1` | Provider unavailable or required answer invalid/missing; retain the current queue. |
+| `2` | Invalid input or configuration. |
+| `3` | Unexpected application/SDK integration defect; `status: error` and sanitized `error_type`. |
+
+## Install, test, and build
 
 ```sh
-python3 -m venv .venv
-.venv/bin/python -m pip install -e .
-.venv/bin/python -m pip install -r requirements-live.txt
-# Set TYPESAFE_API_KEY in your environment, then:
-.venv/bin/python -m jevidence triage --live --input examples/issue.json
-```
-
-Windows users can substitute `.venv\Scripts\python.exe` and set the environment
-variable in their shell. `.env.example` documents the variable; the program does
-not automatically read `.env` files.
-
-The included issue is synthetic. For your own JSON, provide `id`, `title`, and
-`body`. Only these three validated fields are sent; extra fields are discarded.
-Inspect the text before sending it. Do not put credentials or confidential
-customer material into a public issue or fixture.
-
-```sh
-.venv/bin/python -m jevidence triage \
-  --live --input examples/issue.json \
-  --current-queue existing-review \
-  --model jev-1.13.0 --timeout 15 \
-  --route-floor 0.8 --reproduction-floor 0.85
-```
-
-The SDK is pinned to **0.7.1**, and the model defaults to **jev-1.13.0**. Live
-output records the model label returned by the API and the selected backend.
-For Kev that label can be an alias; see the checkpoint notes below. SDK retries are explicitly
-disabled to keep this a single-request experiment. The timeout bounds HTTP
-operations, not an entire production job. There is no outer retry loop.
-
-On API failure or a missing required answer, the result has `status: unavailable`,
-`evidence: null`, and `proposed_queue: null`. The existing queue is retained and
-the CLI exits with code **1**. Input/configuration errors exit with **2**. A
-completed judgment or fixture evaluation exits with **0**, including a judgment
-that correctly falls back to review. Evaluation is exploratory, so mismatches
-do not change its exit code; the test suite enforces the expected fixture policy.
-
-Output omits source text and raw provider error messages. Avoid SDK debug logging
-for sensitive inputs: SDK request/response logging can include bodies.
-
-## Use an existing Kev server
-
-Follow [Kev's server setup](https://github.com/jaredpalmer/kev#quick-start), then:
-
-```sh
-make setup-live
-make kev
-# Different local server port:
-make kev KEV_URL=http://127.0.0.1:8010
-```
-
-This uses the same SDK, questions, and routing policy. It needs no TypeSafe key
-and sends the SDK's placeholder key `local`, even if a paid key is in your
-environment. Jevidence does not install or launch Kev, download model weights,
-or reproduce its playground. See [the Kev connection guide](docs/kev.md) for
-the full CLI command, comparison notes, and serving limitations.
-
-## Docker
-
-Requires a running Docker daemon. The image includes the pinned live SDK but
-runs the **offline demo** by default, as a non-root user. No key is copied into the
-image. The build context uses an allowlist that excludes `.env`, local virtual
-environments, and repository metadata.
-
-```sh
-make docker-build
-make docker-demo    # no network, read-only filesystem
-make docker-test    # policy, CLI, and mocked SDK transport tests
-```
-
-Equivalent build and run commands:
-
-```sh
-docker build --target runtime -t peakevergreen/jevidence:local .
-docker run --rm --network none peakevergreen/jevidence:local demo
-docker run --rm --network none peakevergreen/jevidence:local evaluate
-```
-
-One live request with an already exported key:
-
-```sh
-make docker-live
-# Or:
-docker run --rm -e TYPESAFE_API_KEY peakevergreen/jevidence:local \
-  triage --live --input examples/issue.json
-```
-
-To use your own issue, mount a specific file read-only and pass its container path.
-Never pass a key as a build argument. The Python base tag can receive updates;
-this is a repeatable build recipe with pinned application dependencies, not a
-claim of byte-identical images.
-
-## Tests and CI
-
-```sh
+python3 -m pip install .
+jevidence demo
 make test
-# Include the real SDK contract tests after setup-live:
+# Include SDK transport tests without making live requests:
+make setup-live
 .venv/bin/python -m unittest discover -s tests -v
+# Lint:
+.venv/bin/python -m pip install ruff==0.16.8
+make lint
+# Containers (running Docker daemon required):
+make docker-test docker-build docker-demo
 ```
 
-The suite covers threshold boundaries, every route, unknown labels, malformed
-fixtures, changed thresholds, unavailable judgments, CLI opt-in, and failure
-exit behavior. With the live dependencies installed, it exercises the real SDK
-through a mocked HTTP transport, checks outgoing questions, disables retries,
-and verifies missing-answer and server-error handling. **Tests never call the
-live API.** Five SDK tests are skipped when that optional dependency is absent.
-They include Kev's response shape, local-server failure, and verification that
-a TypeSafe key is never forwarded to the Kev backend.
+CI runs Ruff, Python 3.10/3.12/3.13 tests, mocked SDK transport checks, replay,
+and Docker builds. The Docker runtime is non-root and defaults to the offline
+demo. `make docker-demo` disables networking. The package version comes from
+`jevidence.__version__`; release wheels can be installed without a source checkout.
+This project is not currently published on PyPI.
 
-GitHub Actions checks Python 3.10, 3.12, and 3.13 and builds/runs both Docker
-stages. No repository secrets are required. `requirements-live.txt` pins the
-resolved Python 3.12 dependencies; dependencies conditional on older Python
-versions may additionally be installed by pip.
+## Limitations
 
-## Project map
+- Bundled judgments are **synthetic**. Fixture agreement measures code behavior,
+  not model accuracy or calibration. Real evaluation needs independently labeled,
+  representative inputs and a held-out set. Confidence is not a correctness probability.
+- Thresholds and the specificity hint are teaching choices. Jev and Kev require
+  separate evaluation; API compatibility does not imply equivalent judgments.
+- This is advisory issue triage. It never assigns issues, changes records, or
+  executes actions. Production use also needs access checks, durable/idempotent
+  writes, deadlines, and observability. Prompt wording is not an authorization boundary.
+- Live calls transmit issue text to the selected backend. Captures contain that
+  text, and ordinary output includes issue IDs. Use synthetic/public inputs for
+  shared examples and protect private records and SDK debug logs.
+- Replay reuses existing judgments; it cannot assess new prompts/models, recover
+  missing answers, or estimate inference cost or latency from synthetic records.
 
-```text
-jevidence/
-  policy.py        Pure decision rules and validated evidence
-  questions.py     Versioned Choice/Noul/Score definitions
-  runner.py        Fixture loading, SDK adapter, failure boundary, evaluation
-  cli.py           Offline demo, fixture evaluation, TypeSafe/Kev live triage
-  data/cases.json  Eight synthetic judgments and expected policy outcomes
-examples/issue.json Synthetic issue for a live request
-docs/kev.md        Connect to Kev's existing server and playground
-tests/             Policy, CLI, and real-SDK/mocked-HTTP tests
-Makefile           Local and Docker commands
-Dockerfile         Non-root runtime and test stages
-.github/workflows/ci.yml
-```
-
-## Extend it into your own experiment
-
-1. Choose one application decision with allowed outcomes and a review queue.
-2. Edit the questions and bump `QUESTION_VERSION` when their meaning changes.
-3. Change `decide`, bump `POLICY_VERSION`, and add boundary/failure cases.
-4. Test real judgments against independently labeled, representative inputs.
-   Keep a held-out set separate from the examples used to tune wording or thresholds.
-5. Compare wrong routes, review volume, and total handling cost with the existing
-   process. Run in shadow mode before introducing any real assignment action.
-
-The same separation can support RAG passage selection, CI failure triage,
-handler routing, or document exception queues, as described in the article.
-This repository implements **developer-issue triage**; those other adapters are
-extension ideas, not features claimed to be included.
-
-Production integrations additionally need an end-to-end deadline, authentication
-and authorization, idempotent writes, durable failure handling, observability,
-and evaluation on their own data. Prompt wording is not a security boundary.
-
-## References
-
-- [Companion article](https://peakevergreen.com/blog/jev-for-developers/)
-- [Official Python SDK](https://docs.typesafe.ai/sdk/python)
-- [Client options and retries](https://docs.typesafe.ai/sdk/python/api/clients/sync)
-- [Answer types](https://docs.typesafe.ai/sdk/python/api/types/responses)
-- [Confidence](https://docs.typesafe.ai/confidence)
-- [Model versions and limits](https://docs.typesafe.ai/models)
-
-## Contributing and license
-
-See [CONTRIBUTING.md](CONTRIBUTING.md). Code and documentation are provided under
-the [MIT license](LICENSE). The Jevidence artwork is included with this project;
-the names and trademarks of TypeSafe and Jev belong to their respective owners.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [MIT license](LICENSE),
+[SDK documentation](https://docs.typesafe.ai/sdk/python), and
+[confidence documentation](https://docs.typesafe.ai/confidence).

@@ -36,7 +36,8 @@ for this backend. The adapter explicitly supplies `api_key="local"` rather than
 inheriting a paid TypeSafe key from the environment.
 
 If the server is unavailable or its answer cannot be used, Jevidence keeps the
-current queue and exits with status 1. It never switches providers automatically.
+current queue and exits with status 1. Unexpected implementation errors instead use
+`status: error` and exit 3. It never switches providers automatically.
 
 ## Compare evidence, then review the policy
 
