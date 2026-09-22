@@ -1,0 +1,14 @@
+**
+!Dockerfile
+!pyproject.toml
+!requirements-live.txt
+!README.md
+!LICENSE
+!jevidence/
+!jevidence/*.py
+!jevidence/data/
+!jevidence/data/cases.json
+!examples/
+!examples/issue.json
+!tests/
+!tests/*.py

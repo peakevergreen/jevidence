@@ -1,0 +1,130 @@
+[
+  {
+    "id": "runtime-low-confidence",
+    "issue": {
+      "id": "runtime-low-confidence",
+      "title": "CSV export stops after upgrading the dashboard",
+      "body": "In dashboard 4.2 on Firefox, open Reports, select Last month, then click Export CSV. Expected a download; instead the button stays disabled. The same account can export in Chrome."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "runtime",
+      "confidence": 0.72,
+      "reproduction": 0.95,
+      "specificity": 2.0
+    },
+    "expected_queue": "general-triage"
+  },
+  {
+    "id": "runtime-ready",
+    "issue": {
+      "id": "runtime-ready",
+      "title": "CSV export stops after upgrading the dashboard",
+      "body": "In dashboard 4.2 on Firefox, open Reports, select Last month, then click Export CSV. Expected a download; instead the button stays disabled. The same account can export in Chrome."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "runtime",
+      "confidence": 0.91,
+      "reproduction": 0.93,
+      "specificity": 2.0
+    },
+    "expected_queue": "runtime-investigation"
+  },
+  {
+    "id": "runtime-needs-reproduction",
+    "issue": {
+      "id": "runtime-needs-reproduction",
+      "title": "The dashboard freezes",
+      "body": "The dashboard freezes sometimes. I cannot describe the steps yet."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "runtime",
+      "confidence": 0.93,
+      "reproduction": 0.3,
+      "specificity": 1.0
+    },
+    "expected_queue": "reproduction-review"
+  },
+  {
+    "id": "docs-ready",
+    "issue": {
+      "id": "docs-ready",
+      "title": "Setup guide has an obsolete flag",
+      "body": "The install guide says --legacy but the CLI help no longer lists it."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "docs",
+      "confidence": 0.9,
+      "reproduction": 0.1,
+      "specificity": 1.0
+    },
+    "expected_queue": "documentation-review"
+  },
+  {
+    "id": "build-ready",
+    "issue": {
+      "id": "build-ready",
+      "title": "Package build fails",
+      "body": "Run the package build on a fresh checkout. It exits with a missing compiler error instead of producing the package."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "build",
+      "confidence": 0.9,
+      "reproduction": 0.9,
+      "specificity": 2.0
+    },
+    "expected_queue": "build-investigation"
+  },
+  {
+    "id": "fallback",
+    "issue": {
+      "id": "fallback",
+      "title": "Can you sponsor my event?",
+      "body": "I am organizing a meetup and looking for sponsors."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "other",
+      "confidence": 0.95,
+      "reproduction": 0.1,
+      "specificity": 0.0
+    },
+    "expected_queue": "general-triage"
+  },
+  {
+    "id": "unknown-category",
+    "issue": {
+      "id": "unknown-category",
+      "title": "Unexpected category in replay",
+      "body": "Synthetic forward-compatibility test. A label outside the allowed mapping must never become an executable action."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "security",
+      "confidence": 0.99,
+      "reproduction": 0.99,
+      "specificity": 2.0
+    },
+    "expected_queue": "general-triage"
+  },
+  {
+    "id": "exact-thresholds",
+    "issue": {
+      "id": "exact-thresholds",
+      "title": "CSV export stops after upgrading the dashboard",
+      "body": "In dashboard 4.2 on Firefox, open Reports, select Last month, then click Export CSV. Expected a download; instead the button stays disabled. The same account can export in Chrome."
+    },
+    "evidence": {
+      "model": "synthetic-fixture-not-model-output",
+      "choice": "runtime",
+      "confidence": 0.8,
+      "reproduction": 0.85,
+      "specificity": 2.0
+    },
+    "expected_queue": "runtime-investigation"
+  }
+]

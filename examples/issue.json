@@ -1,0 +1,5 @@
+{
+  "id": "issue-001",
+  "title": "CSV export stops after upgrading the dashboard",
+  "body": "In dashboard 4.2 on Firefox, open Reports, select Last month, then click Export CSV. Expected a download; instead the button stays disabled. The same account can export in Chrome."
+}

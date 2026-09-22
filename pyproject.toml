@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=77,<83"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jevidence"
+version = "0.1.0"
+description = "Let Jev judge and let your code decide: an inspectable issue-routing sandbox."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Peak Evergreen LLC"}]
+dependencies = []
+
+[project.optional-dependencies]
+live = ["typesafe-sdk==0.7.1"]
+
+[project.scripts]
+jevidence = "jevidence.cli:main"
+
+[project.urls]
+Article = "https://peakevergreen.com/blog/jev-for-developers/"
+
+[tool.setuptools.packages.find]
+include = ["jevidence*"]
+
+[tool.setuptools.package-data]
+jevidence = ["data/*.json"]
