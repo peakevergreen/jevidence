@@ -27,6 +27,13 @@ Evidence collection and analysis tooling; preserve its source/data boundaries.
 - Fetch and discover the actual default branch. New tasks start there; named
   PR/release/history work keeps its intended base. Isolate ports/test databases.
   Set and verify `WORKSPACE_ROOT` before shared local-dev setup or unlink.
+- CI workers and their shared VM/runtime, services, networks, volumes, and caches
+  are protected. Agents must not stop/restart/kill/disable/rescale workers or
+  disrupt their infrastructure, even when idle. No broad kills, shared shutdowns,
+  or system/volume pruning for setup, testing, cleanup, or troubleshooting.
+  Use only verified task-owned resources; preserve uncertain ownership and report
+  blockers. On macOS use Colima with a verified Docker CLI/Compose endpoint;
+  do not install/start/use Docker Desktop or change the shared runtime/context.
 - Commit/push only when requested, including the necessary task commit/push for
   an explicit PR request. Preview PRs stay draft. Do not merge/deploy/publish or
   bypass hooks/signing/checks without authorization. Do not create parking stashes.
@@ -43,5 +50,5 @@ Evidence collection and analysis tooling; preserve its source/data boundaries.
   additional mandatory project checks still apply. Use the actual lockfile and
   runtime pins for application validation; never switch package managers.
 
-Detailed lifecycle and recovery: [workspace policy](https://github.com/peakevergreen/local-configs/blob/059707e6c04f61710b4927da5e9132fd763638d4/docs/agent-git-workspace.md).
+Detailed lifecycle and recovery: [workspace policy](https://github.com/peakevergreen/local-configs/blob/b65c51a90c05297c58946f25b1a83c2180d7d1f0/docs/agent-git-workspace.md).
 <!-- END PEAKEVERGREEN WORKSPACE RULES -->
