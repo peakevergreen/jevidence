@@ -5,6 +5,7 @@ import math
 import os
 from pathlib import Path
 
+from .calibrate import report as calibration_report
 from .policy import Evidence, Thresholds
 from .questions import MODEL
 from .replay import load_replay, replay
@@ -27,8 +28,13 @@ def main(argv=None):
         ("evaluate", "Check the policy against synthetic expected queues"),
         ("triage", "Judge a JSON issue using an explicit live API call"),
         ("replay", "Replay stored judgments from JSONL; never calls a model"),
+        ("calibrate", "Calibration, stability, and agreement across stored judgment files"),
     ):
         command = commands.add_parser(name, help=help_text)
+        if name == "calibrate":
+            command.add_argument("inputs", type=Path, nargs="+", help="One JSONL file per model or backend")
+            command.add_argument("--bucket-width", type=float, default=0.1)
+            continue
         command.add_argument("--route-floor", type=float, default=defaults.route_floor)
         command.add_argument("--reproduction-floor", type=float, default=defaults.reproduction_floor)
         if name == "replay":
@@ -48,6 +54,10 @@ def main(argv=None):
             command.add_argument("--record-response", type=Path, help="Save dated raw response and input to a NEW file; contains issue text")
     args = parser.parse_args(argv)
     try:
+        if args.command == "calibrate":
+            result = calibration_report(args.inputs, width=args.bucket_width)
+            print(json.dumps(result, indent=2, allow_nan=False))
+            return 0
         thresholds = Thresholds(args.route_floor, args.reproduction_floor)
         if args.command == "replay":
             comparisons = [Thresholds(floor, args.reproduction_floor) for floor in args.compare_route_floor]
