@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 license = "MIT"
 authors = [{name = "Peak Evergreen LLC"}]
 dependencies = []
-keywords = ["jev", "typesafe", "llm", "issue-triage", "human-in-the-loop", "replay"]
+keywords = ["jev", "typesafe", "llm", "decision-models", "calibration", "issue-triage", "human-in-the-loop", "replay"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",

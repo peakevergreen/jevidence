@@ -57,6 +57,28 @@ without implying accuracy. **Replay never contacts a model.**
 See [the replay guide](docs/replay.md) for the schema, denominators, and a workflow
 for recording, labeling, and comparing real judgments.
 
+## Compare decision models on the same cases
+
+Jev now has company: Cloudflare Clef, OpenAI's Decisions API, Liquid d1,
+Microsoft-Decision-1, and others return the same three shapes of answer. Each
+vendor's leaderboard favors its own model. `calibrate` reads one stored-judgment
+file per model and reports, for your labeled cases:
+
+```sh
+python3 -m jevidence calibrate examples/compare-synthetic-a.jsonl \
+  examples/compare-synthetic-b.jsonl
+```
+
+- **Calibration:** in each confidence band, how often the chosen route was right.
+- **Stability:** how many reworded or reordered variants changed the answer.
+- **Agreement:** which issue IDs the two files disagree on, and which each got right alone.
+
+The bundled files are synthetic and exist to test this code. File B reports
+higher confidence than file A, is right less often, and flips on a reworded
+input, which is the pattern the report is for. **`calibrate` never contacts a model**, and no vendor adapters
+beyond TypeSafe and Kev are bundled: see [the comparison guide](docs/compare.md)
+for the record format and how to convert another model's answers.
+
 ## What the code decides
 
 | Jev judgment | Application behavior |
@@ -146,6 +168,9 @@ This project is not currently published on PyPI.
 - Live calls transmit issue text to the selected backend. Captures contain that
   text, and ordinary output includes issue IDs. Use synthetic/public inputs for
   shared examples and protect private records and SDK debug logs.
+- `calibrate` needs a few hundred independently labeled records per model before
+  its bands mean much; it marks bands under 10 records. Converted records from
+  other models carry a top probability, which is not Jev's confidence calculation.
 - Replay reuses existing judgments; it cannot assess new prompts/models, recover
   missing answers, or estimate inference cost or latency from synthetic records.
 

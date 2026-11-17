@@ -11,5 +11,7 @@
 !examples/
 !examples/issue.json
 !examples/replay-synthetic.jsonl
+!examples/compare-synthetic-a.jsonl
+!examples/compare-synthetic-b.jsonl
 !tests/
 !tests/*.py

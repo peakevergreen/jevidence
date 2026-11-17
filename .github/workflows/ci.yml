@@ -22,6 +22,7 @@ jobs:
       - run: jevidence demo
       - run: jevidence evaluate
       - run: jevidence replay examples/replay-synthetic.jsonl --labels --compare-route-floor 0.7
+      - run: jevidence calibrate examples/compare-synthetic-a.jsonl examples/compare-synthetic-b.jsonl
   docker:
     runs-on: ubuntu-latest
     steps:
